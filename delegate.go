@@ -2,6 +2,7 @@ package delegation
 
 import (
 	"github.com/miekg/dns"
+	"math/rand"
 	"strings"
 )
 
@@ -19,11 +20,10 @@ func (dw *DelegationResponseWriter) WriteMsg(m *dns.Msg) error {
 	resolver := new(dns.Client)
 	msg := new(dns.Msg)
 
-	ns := dns.Field(m.Ns[0], 1)
-	nameserver := strings.TrimSuffix(ns, ".") + dnsPort
+	ns := extractNs(m.Ns)
 
 	msg.SetQuestion(m.Question[0].Name, m.Question[0].Qtype)
-	in, _, err := resolver.Exchange(msg, nameserver)
+	in, _, err := resolver.Exchange(msg, ns[rand.Intn(len(ns))])
 	if err != nil {
 		log.Info("err: ", err.Error())
 	}
@@ -35,4 +35,14 @@ func (dw *DelegationResponseWriter) WriteMsg(m *dns.Msg) error {
 func (dw *DelegationResponseWriter) Write(buf []byte) (int, error) {
 	n, err := dw.ResponseWriter.Write(buf)
 	return n, err
+}
+
+func extractNs(rrset []dns.RR) []string {
+	var servers []string
+	for _, rr := range rrset {
+		ns := dns.Field(rr, 1)
+		nameserver := strings.TrimSuffix(ns, ".") + dnsPort
+		servers = append(servers, nameserver)
+	}
+	return servers
 }
