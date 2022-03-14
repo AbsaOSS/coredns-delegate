@@ -12,15 +12,16 @@ type DelegationResponseWriter struct {
 }
 
 func (dw *DelegationResponseWriter) WriteMsg(m *dns.Msg) error {
-	resolver := new(dns.Client)
-	msg := new(dns.Msg)
-
 	if m.Authoritative {
 		return dw.ResponseWriter.WriteMsg(m)
 	}
 
-	ns := strings.Split(m.Ns[0].String(), "\t")
-	nameserver := strings.TrimSuffix(ns[4], ".") + dnsPort
+	resolver := new(dns.Client)
+	msg := new(dns.Msg)
+
+	ns := dns.Field(m.Ns[0], 1)
+	nameserver := strings.TrimSuffix(ns, ".") + dnsPort
+
 	msg.SetQuestion(m.Question[0].Name, m.Question[0].Qtype)
 	in, _, err := resolver.Exchange(msg, nameserver)
 	if err != nil {
